@@ -1,0 +1,43 @@
+---
+title: "Matt-Hat Jerky 2021 YTD (Jan-Oct) Sales Analysis"
+author: "Mariam, Daniel, & Garrett"
+date: "10/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<a href='https://matthatjerky.com' title='Matt-Hat Jerky Website' target='_blank'><img src='matt-hat-jerky-logo.png' alt='Matt-Hat Jerky Logo' /></a>
+
+## Matt-Hat Jerky Overview
+
+Matt-Hat Jerky is an e-commerce beef jerky company ran by brother/sister duo, Matthew (15) and Katrina (18). The two started Matt-Hat Jerky four years ago, and today are on track to hit $1 million dollar in sales YTD.
+
+Their website is https://www.matthatjerky.com.
+
+## Data Set Overview
+
+Our data set is includes sales data from January to October 2021 grouped by month, sales channel, location, customer type, product, and product type. Each record contains the number of orders, gross sales, discounts, returns, net sales, shipping, taxes, total sales, total tips, and average order value.
+
+The data set contains:
+
+28071 records
+18 variable
+
+```{r}
+sales <- read.csv('sales_2021_YTD.csv')
+
+summary(sales)
+head(sales, 20)
+View(sales)
+
+uniqueTime <- unique(sales[1], incomparables = FALSE)
+uniqueSalesChannel <- unique(sales[2], incomparables = FALSE)
+uniqueCity <- unique(sales[3], incomparables = FALSE)
+
+uniqueTime
+uniqueSalesChannel
+uniqueCity
+ ```
