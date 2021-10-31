@@ -1,43 +1,104 @@
 ---
 title: "Matt-Hat Jerky 2021 YTD (Jan-Oct) Sales Analysis"
 author: "Mariam, Daniel, & Garrett"
-date: "10/26/2021"
-output: html_document
+date: "12/11/2021"
+output: rmdformats::readthedown
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(rmdformats)
+library(fastDummies)
 ```
+
+# Executive Summary
+
+TBD once report is completed.
+
+# Data Description
 
 <a href='https://matthatjerky.com' title='Matt-Hat Jerky Website' target='_blank'><img src='matt-hat-jerky-logo.png' alt='Matt-Hat Jerky Logo' /></a>
 
 ## Matt-Hat Jerky Overview
 
-Matt-Hat Jerky is an e-commerce beef jerky company ran by brother/sister duo, Matthew (15) and Katrina (18). The two started Matt-Hat Jerky four years ago, and today are on track to hit $1 million dollar in sales YTD.
+Matt-Hat Jerky is an e-commerce beef jerky company run by brother/sister duo, Matthew (15) and Katrina (18). The two started Matt-Hat Jerky four years ago, and today are on track to hit $1 million dollar in sales YTD.
 
 Their website is https://www.matthatjerky.com.
 
 ## Data Set Overview
 
-Our data set is includes sales data from January to October 2021 grouped by month, sales channel, location, customer type, product, and product type. Each record contains the number of orders, gross sales, discounts, returns, net sales, shipping, taxes, total sales, total tips, and average order value.
+Our data set includes sales data from January to October 2021 grouped by month, sales channel, location, customer type, product, and product type. Each record contains the number of orders, gross sales, discounts, returns, net sales, shipping, taxes, total sales, total tips, and average order value.
 
 The data set contains:
 
-28071 records
-18 variable
+28071 records<br>
+18 variables
+
+1. Month = month (character)
+2. Sales Channel = api_client_title (character)
+3. Shipped to City = shipping_city (character)
+4. Shipped to Region = shipping_region (character)
+5. Shipping to Country = shipping_country (character)
+6. First/Return Customer Type = customer_type (character)
+7. Matt-Hat Jerky Product Name = product_title (character)
+8. Matt-Hat Jerky Product Type = product_type (character)
+9. Number of Orders = orders (integer)
+10. Gross Sales = gross_sales (number)
+11. Discounts = discounts (number)
+12. Returns = returns (number)
+13. Net Sales = net_sales (number) = Gross Sales - Discounts - Returns
+14. Shipping = shipping (number)
+15. Taxes = taxes (number)
+16. Total Sales = total_sales (number) Net Sales + Shipping + Taxes
+17. Total Tips = total_sales (number)
+18. Average Order Value = average_order_value (number)
+
+## Exploratory Data Analysis (EDA)
 
 ```{r}
+# Read the data into RStudio & assign it to the 'sales' variable.
 sales <- read.csv('sales_2021_YTD.csv')
 
+# Take an initial look at the data frame fields, records, data types, etc. to see if anything seems off.
 summary(sales)
 head(sales, 20)
 View(sales)
+```
 
+There seems to some missing values in the product title and product type fields just by viewing the first 20 records of the data set.
+
+```{r}
 uniqueTime <- unique(sales[1], incomparables = FALSE)
 uniqueSalesChannel <- unique(sales[2], incomparables = FALSE)
 uniqueCity <- unique(sales[3], incomparables = FALSE)
+uniqueRegion <- unique(sales[4], incomparables = FALSE)
+uniqueCountry <- unique(sales[5], incomparables = FALSE)
+uniqueCustomerType <- unique(sales[6], incomparables = FALSE)
+uniqueProductTitle <- unique(sales[7], incomparables = FALSE)
+uniqueProductType <- unique(sales[8], incomparables = FALSE)
 
 uniqueTime
 uniqueSalesChannel
 uniqueCity
- ```
+uniqueRegion
+uniqueCountry
+uniqueCustomerType
+uniqueProductTitle
+uniqueProductType
+``` 
+ 
+# Research Questions
+
+1. Which sales channel, location, and product combination are most likely to produce high lifetime value (LTV) customers? High LTV customers are those we high order counts, and high net sales (minimal discounts & returns).
+
+2. Which sales channel, location, and product combination are likely to produce returning customers?
+
+3. Which sales channel, location, and product combination produce the highest average order value (AOV)? AOV is used in determining how much marketing dollars are worth spending.
+
+```{r}
+# salesWithDummies <- dummy_cols(sales, select_columns = c('api_client_title', 'shipping_region', 'product_title'), remove_selected_columns = TRUE)
+# 
+# ltvRegression <- lm(net_sales ~ ., data=salesWithDummies)
+# 
+# summary(ltvRegression)
+```
