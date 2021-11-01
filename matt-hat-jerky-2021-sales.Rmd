@@ -7,8 +7,21 @@ output: rmdformats::readthedown
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+require(devtools)
 library(rmdformats)
 library(fastDummies)
+library(DataExplorer)
+library(caret)
+library(skimr)
+library(RANN)
+library(randomForest)
+library(fastAdaboost)
+library(gbm)
+library(xgboost)
+library(caretEnsemble)
+library(C50)
+library(earth)
+library(wordcloud2)
 ```
 
 # Executive Summary
@@ -57,12 +70,14 @@ The data set contains:
 
 ```{r}
 # Read the data into RStudio & assign it to the 'sales' variable.
-sales <- read.csv('sales_2021_YTD.csv')
+sales <- read.csv('sales_2021_YTD.csv' )
 
 # Take an initial look at the data frame fields, records, data types, etc. to see if anything seems off.
+skimr::skim(sales)
 summary(sales)
 head(sales, 20)
-View(sales)
+DataExplorer::plot_intro(sales)
+DataExplorer::plot_bar(sales)
 ```
 
 There seems to some missing values in the product title and product type fields just by viewing the first 20 records of the data set.
@@ -77,14 +92,10 @@ uniqueCustomerType <- unique(sales[6], incomparables = FALSE)
 uniqueProductTitle <- unique(sales[7], incomparables = FALSE)
 uniqueProductType <- unique(sales[8], incomparables = FALSE)
 
-uniqueTime
-uniqueSalesChannel
-uniqueCity
-uniqueRegion
-uniqueCountry
-uniqueCustomerType
-uniqueProductTitle
-uniqueProductType
+uniqueFields <- c(uniqueTime, uniqueSalesChannel, uniqueCity, uniqueRegion,
+                  uniqueCountry, uniqueCustomerType, uniqueProductTitle, uniqueProductType)
+
+uniqueFields
 ``` 
  
 # Research Questions
@@ -101,4 +112,22 @@ uniqueProductType
 # ltvRegression <- lm(net_sales ~ ., data=salesWithDummies)
 # 
 # summary(ltvRegression)
+```
+
+```{r}
+# Create the training and test data sets
+#set.seed(100)
+#
+# Step 1: Get row numbers for the training data
+#trainRowNumbers <- createDataPartition(sales$net_sales, p = 0.8, list = FALSE)
+#
+# Step 2: Create the training  data set
+#trainData <- sales[trainRowNumbers,]
+#
+# Step 3: Create the test data set
+#testData <- sales[-trainRowNumbers,]
+
+# Store X and Y for later use.
+#x = trainData[, 2:18]
+#y = trainData$net_sales
 ```
