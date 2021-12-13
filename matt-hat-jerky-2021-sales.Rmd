@@ -122,9 +122,15 @@ cleanSales <- sales %>%
 3. Which sales channel, location, and product combination produce the highest average order value (AOV)? AOV is used in determining how much marketing dollars are worth spending.
 
 ```{r}
+<<<<<<< HEAD
 salesWithDummies <- dummy_cols(sales, select_columns = c('product_title'), remove_selected_columns = TRUE)
 #
 ltvRegression <- lm(net_sales ~ sales[:19], data = salesWithDummies)
+=======
+salesWithDummies <- dummy_cols(sales, select_columns = c('api_client_title', 'shipping_region', 'product_title'), remove_selected_columns = TRUE)
+
+# ltvRegression <- lm(net_sales ~ ., data=salesWithDummies)
+>>>>>>> 2b48aed96d730bb0b86381709a4be3f139e89fd3
 # 
 # summary(ltvRegression)
 ```
