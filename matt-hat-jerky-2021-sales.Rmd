@@ -1,7 +1,7 @@
 ---
 title: "Matt-Hat Jerky 2021 YTD (Jan-Oct) Sales Analysis"
 author: "Mariam, Daniel, & Garrett"
-date: "12/11/2021"
+date: "12/12/2021"
 output: rmdformats::readthedown
 ---
 
@@ -9,6 +9,7 @@ output: rmdformats::readthedown
 knitr::opts_chunk$set(echo = TRUE)
 require(devtools)
 library(rmdformats)
+library(tidyverse)
 library(fastDummies)
 library(DataExplorer)
 library(caret)
@@ -21,12 +22,11 @@ library(xgboost)
 library(caretEnsemble)
 library(C50)
 library(earth)
-library(wordcloud2)
+library(wordcloud)
+library(RColorBrewer)
+library(tm)
+library(ggplot2)
 ```
-
-# Executive Summary
-
-TBD once report is completed.
 
 # Data Description
 
@@ -47,30 +47,40 @@ The data set contains:
 28071 records<br>
 18 variables
 
-1. Month = month (character)
-2. Sales Channel = api_client_title (character)
-3. Shipped to City = shipping_city (character)
-4. Shipped to Region = shipping_region (character)
-5. Shipping to Country = shipping_country (character)
-6. First/Return Customer Type = customer_type (character)
-7. Matt-Hat Jerky Product Name = product_title (character)
-8. Matt-Hat Jerky Product Type = product_type (character)
-9. Number of Orders = orders (integer)
-10. Gross Sales = gross_sales (number)
-11. Discounts = discounts (number)
-12. Returns = returns (number)
-13. Net Sales = net_sales (number) = Gross Sales - Discounts - Returns
-14. Shipping = shipping (number)
-15. Taxes = taxes (number)
-16. Total Sales = total_sales (number) Net Sales + Shipping + Taxes
-17. Total Tips = total_sales (number)
-18. Average Order Value = average_order_value (number)
+1. Month = month (datatype: character) - Month starts at January 2021 (i.e., 2021-01) and end in October 2021 (i.e., 2021-10). This field signifies the month in which a purchase occurs.
+2. Sales Channel = api_client_title (datatype: character) - 
+3. Shipped to City = shipping_city (datatype: character) - 
+4. Shipped to Region = shipping_region (datatype: character) - 
+5. Shipping to Country = shipping_country (datatype: character)
+6. First/Return Customer Type = customer_type (datatype: character)
+7. Matt-Hat Jerky Product Name = product_title (datatype: character)
+8. Matt-Hat Jerky Product Type = product_type (datatype: character)
+9. Number of Orders = orders (datatype: integer)
+10. Gross Sales = gross_sales (datatype: number)
+11. Discounts = discounts (datatype: number)
+12. Returns = returns (datatype: number)
+13. Net Sales = net_sales (datatype: number) - Net sales are the a function of when sales discounts and returns are subtracted from gross sales.
+
+$$
+Net Sales = Gross Sales - Discounts - Returns
+$$
+
+14. Shipping = shipping (datatype: number)
+15. Taxes = taxes (datatype: number)
+16. Total Sales = total_sales (datatype: number)
+
+$$
+Total Sales = Net Sales + Shipping + Taxes
+$$
+
+17. Total Tips = total_tips (datatype: number) - Total tips include one-time donations from customers to Matt-Hat Jerky as a thank you for services. The fields works similar to tipping at a restaurant.
+18. Average Order Value = average_order_value (datatype: number)
 
 ## Exploratory Data Analysis (EDA)
 
 ```{r}
 # Read the data into RStudio & assign it to the 'sales' variable.
-sales <- read.csv('sales_2021_YTD.csv' )
+sales <- read.csv('sales_2021_YTD.csv')
 
 # Take an initial look at the data frame fields, records, data types, etc. to see if anything seems off.
 skimr::skim(sales)
@@ -82,7 +92,7 @@ DataExplorer::plot_bar(sales)
 
 There seems to some missing values in the product title and product type fields just by viewing the first 20 records of the data set.
 
-```{r}
+```{r uniqueFields}
 uniqueTime <- unique(sales[1], incomparables = FALSE)
 uniqueSalesChannel <- unique(sales[2], incomparables = FALSE)
 uniqueCity <- unique(sales[3], incomparables = FALSE)
@@ -92,12 +102,17 @@ uniqueCustomerType <- unique(sales[6], incomparables = FALSE)
 uniqueProductTitle <- unique(sales[7], incomparables = FALSE)
 uniqueProductType <- unique(sales[8], incomparables = FALSE)
 
-uniqueFields <- c(uniqueTime, uniqueSalesChannel, uniqueCity, uniqueRegion,
-                  uniqueCountry, uniqueCustomerType, uniqueProductTitle, uniqueProductType)
+uniqueFields <- c(uniqueTime, uniqueSalesChannel, uniqueCity, uniqueRegion, uniqueCountry, uniqueCustomerType, uniqueProductTitle, uniqueProductType)
 
 uniqueFields
 ``` 
  
+
+```{r dataCleanUp}
+cleanSales <- sales %>%
+              select(c('month','api_client_title','shipping_region','customer_type','product_title','orders','gross_sales','discounts','returns','net_sales','shipping','taxes','total_sales','total_tips','average_order_value'))
+```
+
 # Research Questions
 
 1. Which sales channel, location, and product combination are most likely to produce high lifetime value (LTV) customers? High LTV customers are those we high order counts, and high net sales (minimal discounts & returns).
@@ -107,27 +122,150 @@ uniqueFields
 3. Which sales channel, location, and product combination produce the highest average order value (AOV)? AOV is used in determining how much marketing dollars are worth spending.
 
 ```{r}
-# salesWithDummies <- dummy_cols(sales, select_columns = c('api_client_title', 'shipping_region', 'product_title'), remove_selected_columns = TRUE)
-# 
-# ltvRegression <- lm(net_sales ~ ., data=salesWithDummies)
+salesWithDummies <- dummy_cols(sales, select_columns = c('product_title'), remove_selected_columns = TRUE)
+#
+ltvRegression <- lm(net_sales ~ sales[:19], data = salesWithDummies)
 # 
 # summary(ltvRegression)
 ```
 
 ```{r}
 # Create the training and test data sets
-#set.seed(100)
+set.seed(100)
 #
 # Step 1: Get row numbers for the training data
-#trainRowNumbers <- createDataPartition(sales$net_sales, p = 0.8, list = FALSE)
+trainRowNumbers <- createDataPartition(sales$net_sales, p = 0.8, list = FALSE)
 #
 # Step 2: Create the training  data set
-#trainData <- sales[trainRowNumbers,]
+trainData <- sales[trainRowNumbers,]
 #
 # Step 3: Create the test data set
-#testData <- sales[-trainRowNumbers,]
+testData <- sales[-trainRowNumbers,]
 
 # Store X and Y for later use.
-#x = trainData[, 2:18]
-#y = trainData$net_sales
+x = trainData[, 2:18]
+y = trainData$net_sales
+
+
+```
+
+```{r wordclouds}
+# Create the worldcloud vectors.
+cityCloud <- sales$shipping_city
+regionCloud <- sales$shipping_region
+
+# Remove the empty values.
+cityCloud[cityCloud != ""]
+regionCloud[regionCloud != ""]
+
+# Create corpuses for each city and region.
+cityDocs <- Corpus(VectorSource(cityCloud))
+regionDocs <- Corpus(VectorSource(regionCloud))
+
+documentTermMatrixCity <- TermDocumentMatrix(cityDocs) 
+matrixCity <- as.matrix(documentTermMatrixCity) 
+wordsCity <- sort(rowSums(matrixCity), decreasing = TRUE) 
+dfCity <- data.frame(word = names(wordsCity), freq = wordsCity)
+
+documentTermMatrixRegion <- TermDocumentMatrix(regionDocs) 
+matrixRegion <- as.matrix(documentTermMatrixRegion)
+wordsRegion <- sort(rowSums(matrixRegion), decreasing = TRUE) 
+dfRegion <- data.frame(word = names(wordsRegion), freq = wordsRegion)
+
+# Set the seed
+set.seed(1234)
+
+# Plot the city and region wordclouds.
+wordcloud(words = dfCity$word, freq = dfCity$freq, min.freq = 3,
+          max.words = 200, random.order = FALSE, rot.per = 0.35,
+          colors = brewer.pal(8, "Spectral"))
+
+wordcloud(words = dfRegion$word, freq = dfRegion$freq, min.freq = 3,
+          max.words = 200, random.order = FALSE, rot.per = 0.35,
+          colors = brewer.pal(8, "Spectral"))
+
+```
+
+```{r salesOverTime}
+salesOverTime <- data.frame(time = sales$month,
+                            sales = sales$gross_sales)
+
+ggplot(salesOverTime, aes(x = time, y = sales)) + 
+       geom_bar(stat = "identity", fill = "Red") +
+       scale_x_discrete(name = "2021 Year-to-Date (YTD) Months") +
+       scale_y_continuous(name = "Gross Sales")
+```
+
+```{r salesByRegion}
+salesByRegion <- data.frame(region = sales$shipping_region,
+                            sales = sales$gross_sales)
+
+ggplot(salesByRegion, aes(x = region, y = sales)) + 
+       geom_bar(stat = "identity", fill = "Red") +
+       scale_x_discrete(name = "Region") +
+       scale_y_continuous(name = "Gross Sales") +
+       theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r salesByRegion}
+salesByRegion <- data.frame(region = sales$shipping_region,
+                            sales = sales$gross_sales)
+
+ggplot(salesByRegion, aes(x = region, y = sales)) + geom_point() +
+       theme(axis.text.x = element_text(angle = 90))
+
+
+ggplot(salesByRegion, aes(x = region, y = sales)) + 
+       geom_bar(stat = "identity", fill = "Red") +
+       scale_x_discrete(name = "Region") +
+       scale_y_continuous(name = "Gross Sales") +
+       theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r aovByRegion}
+aovByRegion <- data.frame(region = sales$shipping_region,
+                            aov = sales$average_order_value)
+
+ggplot(aovByRegion, aes(x = region, y = aov)) + 
+       geom_bar(stat = "identity", fill = "Red") +
+       scale_x_discrete(name = "Region") +
+       scale_y_continuous(name = "Average Order Value (AOV)") +
+       theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r regression}
+regression <- data.frame(region = sales$shipping_region,
+                            aov = sales$average_order_value)
+
+model <- lm(gross_sales ~ shipping_region + product_title, data = sales)
+summary(model)
+
+plot(sales$gross_sales, sales$average_order_value)
+
+ggplot(sales, aes(x = gross_sales, y = average_order_value)) + 
+    geom_point() +
+    geom_smooth()
+
+ggplot(sales, aes(x = product_title, y = average_order_value)) + 
+    geom_point() +
+    geom_smooth()
+
+```
+
+```{r customerTypebyRegion}
+customerTypebyRegionFirstTime <- data.frame(region = sales$shipping_region,
+                            customerType = sales$customer_type == "First-time")
+
+customerTypebyRegionReturning <- data.frame(region = sales$shipping_region,
+                            customerType = sales$customer_type == "Returning")
+
+ggplot(customerTypebyRegion, aes(x = region, y = customerType)) + 
+       geom_bar(stat = "identity") +
+       scale_x_discrete(name = "Region") +
+       scale_y_discrete(name = "First-time") +
+       theme(axis.text.x = element_text(angle = 90))
+
+sales$customer_type[sales$customer_type == 0] <- "First-time"
+sales$customer_type[sales$customer_type == 1] <- "Returning"
+plot(sales$customer_type[sales$customer_type == 0])
 ```
